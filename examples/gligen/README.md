@@ -12,9 +12,10 @@
 ```Shell
 conda create -n gligen_diffusers python=3.10
 conda activate gligen_diffusers
-pip install torch torchvision transformers
+pip install torch torchvision transformers accelerate
 
 git clone https://github.com/gligen/GLIGEN.git
+cd GLIGEN
 git submodule update --init --recursive
 pip install -e ./diffusers
 ```

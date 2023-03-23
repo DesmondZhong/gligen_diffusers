@@ -9,14 +9,19 @@
 * **[2023.03.22]** Our fork on diffusers with support of text-box-conditioned generation and inpainting is released.  We are working on integrating it into official diffusers code base.  More conditions and a new demo is on the way.  Stay tuned!
 
 ## Installation
-```
+```Shell
+conda create -n gligen_diffusers python=3.10
+conda activate gligen_diffusers
 pip install torch torchvision transformers
-pip install -e .
+
+git clone https://github.com/gligen/GLIGEN.git
+git submodule update --init --recursive
+pip install -e ./diffusers
 ```
 
 ## Usage
 ```Shell
-cd examples/gligen
+cd diffusers/examples/gligen
 
 # for text-box conditioned generation.
 python generation_text_box.py

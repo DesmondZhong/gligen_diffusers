@@ -14,15 +14,13 @@ conda create -n gligen_diffusers python=3.10
 conda activate gligen_diffusers
 pip install torch torchvision transformers accelerate
 
-git clone https://github.com/gligen/GLIGEN.git
-cd GLIGEN
-git submodule update --init --recursive
-pip install -e ./diffusers
+git clone git@github.com:gligen/diffusers.git
+pip install -e .
 ```
 
 ## Usage
 ```Shell
-cd diffusers/examples/gligen
+cd examples/gligen
 
 # for text-box conditioned generation.
 python generation_text_box.py

@@ -750,7 +750,6 @@ class StableDiffusionGLIGENPipeline(DiffusionPipeline):
             for i, t in enumerate(timesteps):
                 # Scheduled sampling
                 if i == num_grounding_steps:
-                    print('disable fuser')
                     self.enable_fuser(False)
 
                 if latents.shape[1] != 4:

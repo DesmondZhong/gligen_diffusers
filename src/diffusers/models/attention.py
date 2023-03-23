@@ -20,6 +20,7 @@ from torch import nn
 
 from ..utils.import_utils import is_xformers_available
 from .attention_processor import Attention
+from .cross_attention import CrossAttention
 from .embeddings import CombinedTimestepLabelEmbeddings
 
 

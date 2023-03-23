@@ -1,3 +1,5 @@
+# This is GLIGEN's fork of Diffusers.  See <a href="./examples/gligen/">here</a> for instructions.
+
 <p align="center">
     <br>
     <img src="./docs/source/en/imgs/diffusers_library.jpg" width="400"/>

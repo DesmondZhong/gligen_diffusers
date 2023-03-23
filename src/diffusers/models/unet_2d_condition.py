@@ -50,6 +50,60 @@ class UNet2DConditionOutput(BaseOutput):
     sample: torch.FloatTensor
 
 
+class FourierEmbedder(nn.Module):
+    def __init__(self, num_freqs=64, temperature=100):
+        super().__init__()
+
+        self.num_freqs = num_freqs
+        self.temperature = temperature
+
+        freq_bands = temperature ** (torch.arange(num_freqs) / num_freqs)
+        freq_bands = freq_bands[None, None, None]
+        self.register_buffer('freq_bands', freq_bands, persistent=False)
+
+    def __call__(self, x):
+        x = self.freq_bands * x.unsqueeze(-1)
+        return torch.stack((x.sin(), x.cos()), dim=-1).permute(0, 1, 3, 4, 2).reshape(*x.shape[:2], -1)
+
+
+class PositionNet(nn.Module):
+    def __init__(self,  positive_len, out_dim, fourier_freqs=8):
+        super().__init__()
+        self.positive_len = positive_len
+        self.out_dim = out_dim 
+
+        self.fourier_embedder = FourierEmbedder(num_freqs=fourier_freqs)
+        self.position_dim = fourier_freqs * 2 * 4 # 2: sin/cos, 4: xyxy 
+
+        self.linears = nn.Sequential(
+            nn.Linear(self.positive_len + self.position_dim, 512),
+            nn.SiLU(),
+            nn.Linear(512, 512),
+            nn.SiLU(),
+            nn.Linear(512, out_dim),
+        )
+
+        self.null_positive_feature = torch.nn.Parameter(torch.zeros([self.positive_len]))
+        self.null_position_feature = torch.nn.Parameter(torch.zeros([self.position_dim]))
+
+    def forward(self, boxes, masks, positive_embeddings):
+        masks = masks.unsqueeze(-1)
+
+        # embedding position (it may includes padding as placeholder)
+        xyxy_embedding = self.fourier_embedder(boxes) # B*N*4 -> B*N*C
+
+        # learnable null embedding 
+        positive_null = self.null_positive_feature.view(1, 1, -1)
+        xyxy_null = self.null_position_feature.view(1, 1, -1)
+
+        # replace padding with learnable null embedding 
+        positive_embeddings = positive_embeddings * masks + (1 - masks) * positive_null
+        xyxy_embedding = xyxy_embedding * masks + (1 - masks) * xyxy_null
+
+        objs = self.linears(torch.cat([positive_embeddings, xyxy_embedding], dim=-1))
+        return objs
+
+
 class UNet2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixin):
     r"""
     UNet2DConditionModel is a conditional 2D UNet model that takes in a noisy sample, conditional state, and a timestep
@@ -149,6 +203,7 @@ class UNet2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixin)
         conv_in_kernel: int = 3,
         conv_out_kernel: int = 3,
         projection_class_embeddings_input_dim: Optional[int] = None,
+        use_gated_attention: bool = False,
     ):
         super().__init__()
 
@@ -265,6 +320,7 @@ class UNet2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixin)
                 only_cross_attention=only_cross_attention[i],
                 upcast_attention=upcast_attention,
                 resnet_time_scale_shift=resnet_time_scale_shift,
+                use_gated_attention=use_gated_attention,
             )
             self.down_blocks.append(down_block)
 
@@ -283,6 +339,7 @@ class UNet2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixin)
                 dual_cross_attention=dual_cross_attention,
                 use_linear_projection=use_linear_projection,
                 upcast_attention=upcast_attention,
+                use_gated_attention=use_gated_attention,
             )
         elif mid_block_type == "UNetMidBlock2DSimpleCrossAttn":
             self.mid_block = UNetMidBlock2DSimpleCrossAttn(
@@ -342,6 +399,7 @@ class UNet2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixin)
                 only_cross_attention=only_cross_attention[i],
                 upcast_attention=upcast_attention,
                 resnet_time_scale_shift=resnet_time_scale_shift,
+                use_gated_attention=use_gated_attention,
             )
             self.up_blocks.append(up_block)
             prev_output_channel = output_channel
@@ -360,6 +418,9 @@ class UNet2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixin)
         self.conv_out = nn.Conv2d(
             block_out_channels[0], out_channels, kernel_size=conv_out_kernel, padding=conv_out_padding
         )
+
+        if use_gated_attention:
+            self.position_net = PositionNet(positive_len=768, out_dim=cross_attention_dim)
 
     @property
     def attn_processors(self) -> Dict[str, AttentionProcessor]:
@@ -575,6 +636,14 @@ class UNet2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixin)
 
         # 2. pre-process
         sample = self.conv_in(sample)
+
+        # 2.5 GLIGEN position net
+        if cross_attention_kwargs is not None and cross_attention_kwargs.get('gligen', None) is not None:
+            cross_attention_kwargs = cross_attention_kwargs.copy()
+            gligen_args = cross_attention_kwargs.pop('gligen')
+            cross_attention_kwargs['gligen'] = {
+                'objs': self.position_net(**gligen_args)
+            }
 
         # 3. down
         down_block_res_samples = (sample,)

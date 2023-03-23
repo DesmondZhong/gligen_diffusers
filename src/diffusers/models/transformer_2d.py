@@ -98,6 +98,7 @@ class Transformer2DModel(ModelMixin, ConfigMixin):
         upcast_attention: bool = False,
         norm_type: str = "layer_norm",
         norm_elementwise_affine: bool = True,
+        use_gated_attention: bool = False,
     ):
         super().__init__()
         self.use_linear_projection = use_linear_projection
@@ -190,6 +191,7 @@ class Transformer2DModel(ModelMixin, ConfigMixin):
                     upcast_attention=upcast_attention,
                     norm_type=norm_type,
                     norm_elementwise_affine=norm_elementwise_affine,
+                    use_gated_attention=use_gated_attention,
                 )
                 for d in range(num_layers)
             ]

@@ -1,7 +1,7 @@
 import os
 import torch
 import torchvision
-from diffusers import StableDiffusionGLIGENPipeline
+from gligen_diffusers import StableDiffusionGLIGENPipeline
 
 from PIL import Image
 

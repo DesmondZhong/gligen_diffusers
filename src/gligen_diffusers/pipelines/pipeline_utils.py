@@ -32,7 +32,7 @@ from packaging import version
 from PIL import Image
 from tqdm.auto import tqdm
 
-import diffusers
+import gligen_diffusers
 
 from .. import __version__
 from ..configuration_utils import ConfigMixin
@@ -73,7 +73,7 @@ if is_accelerate_available():
 
 INDEX_FILE = "diffusion_pytorch_model.bin"
 CUSTOM_PIPELINE_FILE_NAME = "pipeline.py"
-DUMMY_MODULES_FOLDER = "diffusers.utils"
+DUMMY_MODULES_FOLDER = "gligen_diffusers.utils"
 TRANSFORMERS_DUMMY_MODULES_FOLDER = "transformers.utils"
 
 
@@ -81,7 +81,7 @@ logger = logging.get_logger(__name__)
 
 
 LOADABLE_CLASSES = {
-    "diffusers": {
+    "gligen_diffusers": {
         "ModelMixin": ["save_pretrained", "from_pretrained"],
         "SchedulerMixin": ["save_pretrained", "from_pretrained"],
         "DiffusionPipeline": ["save_pretrained", "from_pretrained"],
@@ -335,11 +335,11 @@ def load_sub_model(
     loading_kwargs = {}
     if issubclass(class_obj, torch.nn.Module):
         loading_kwargs["torch_dtype"] = torch_dtype
-    if issubclass(class_obj, diffusers.OnnxRuntimeModel):
+    if issubclass(class_obj, gligen_diffusers.OnnxRuntimeModel):
         loading_kwargs["provider"] = provider
         loading_kwargs["sess_options"] = sess_options
 
-    is_diffusers_model = issubclass(class_obj, diffusers.ModelMixin)
+    is_diffusers_model = issubclass(class_obj, gligen_diffusers.ModelMixin)
 
     if is_transformers_available():
         transformers_version = version.parse(version.parse(transformers.__version__).base_version)
@@ -412,7 +412,7 @@ class DiffusionPipeline(ConfigMixin):
 
     def register_modules(self, **kwargs):
         # import it here to avoid circular import
-        from diffusers import pipelines
+        from gligen_diffusers import pipelines
 
         for name, module in kwargs.items():
             # retrieve library
@@ -820,7 +820,7 @@ class DiffusionPipeline(ConfigMixin):
         if pipeline_class.__name__ == "StableDiffusionInpaintPipeline" and version.parse(
             version.parse(config_dict["_diffusers_version"]).base_version
         ) <= version.parse("0.5.1"):
-            from diffusers import StableDiffusionInpaintPipeline, StableDiffusionInpaintPipelineLegacy
+            from gligen_diffusers import StableDiffusionInpaintPipeline, StableDiffusionInpaintPipelineLegacy
 
             pipeline_class = StableDiffusionInpaintPipelineLegacy
 
@@ -903,7 +903,7 @@ class DiffusionPipeline(ConfigMixin):
             )
 
         # import it here to avoid circular import
-        from diffusers import pipelines
+        from gligen_diffusers import pipelines
 
         # 6. Load each module in the pipeline
         for name, (library_name, class_name) in init_dict.items():

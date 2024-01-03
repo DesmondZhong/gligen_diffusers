@@ -222,7 +222,7 @@ install_requires = [
 ]
 
 setup(
-    name="diffusers",
+    name="gligen_diffusers",
     version="0.15.0.dev0",  # expected format is one of x.y.z.dev0, or x.y.z.rc1 or x.y.z (no to dashes, yes to dots)
     description="Diffusers",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -238,7 +238,7 @@ setup(
     python_requires=">=3.7.0",
     install_requires=install_requires,
     extras_require=extras,
-    entry_points={"console_scripts": ["diffusers-cli=diffusers.commands.diffusers_cli:main"]},
+    # entry_points={"console_scripts": ["gligen-diffusers-cli=gligen_diffusers.commands.diffusers_cli:main"]},
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",

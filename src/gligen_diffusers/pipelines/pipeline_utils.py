@@ -861,6 +861,11 @@ class DiffusionPipeline(ConfigMixin):
 
         init_dict = {k: v for k, v in init_dict.items() if load_module(k, v)}
 
+        # the library name is hardcoded in the checkpoint, this workaround is a bit hacky
+        for k, v in init_dict.items():
+            if v[0] == "diffusers":
+                v[0] = "gligen_diffusers"
+
         # Special case: safety_checker must be loaded separately when using `from_flax`
         if from_flax and "safety_checker" in init_dict and "safety_checker" not in passed_class_obj:
             raise NotImplementedError(
